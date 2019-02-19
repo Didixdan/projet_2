@@ -1,5 +1,5 @@
  ==============================================================================
-| Jeu Where2Go (labyrinthe avec murs invisibles) Version 1.0 28/01/2018        |
+| Jeu Where2Go v2 (labyrinthe avec murs invisibles) Version 1.0 28/01/2018        |
 | Auteur : BOTTE Florian et VARIN Alexandre (L3 Info Passerelle session 2018)  |
  ==============================================================================
 
