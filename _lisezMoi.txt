@@ -1,0 +1,32 @@
+ ==============================================================================
+| Jeu Where2Go v2 (labyrinthe avec murs invisibles) Version 1.0 28/01/2018        |
+| Auteur : BOTTE Florian et VARIN Alexandre (L3 Info Passerelle session 2018)  |
+ ==============================================================================
+
+*** Note d'utilisation ***
+----------------------------------------------------------------------------
+1. Creé une carte : 
+	- Compilé le dossier éditeur avec la magnifique commande "make"
+	- lancer l'éditeur avec la commande "./edit_carte XXX" ou XXX 
+	correspond au nom de la carte à crée
+
+2. Jouer :
+	- Compilé le dossier jeu avec la magnifique commande "make"
+	- lancer le jeu avec la commande "./jeu XXX_YYY" où :
+		- XXX correspond au nom de la carte à ouvrir
+		- YYY la version de la sauvegarde (peut être vide)
+
+3. Et après ?
+	- Pour gagner, il suffit simplement de se rendre à la sortie !
+	- Si vous perdez, c'est que vous avez utilisez toutes les vies mis à votre disposition !
+	- Que vous gagnez ou que vous perdez, le jeu est sauvegarder dans l'état et vous devez supprimez
+	la sauvegarde si vous insistez pour réessayer la meme carte.
+
+*** Note d'installation ***
+----------------------------------------------------------------------------
+Le jeu ne requiert aucune installation, juste l'obligation de la présence des
+dossiers qu'ils utilisent : 
+	- cartes : contient toutes les cartes créer avec l'éditeur
+	- editeur : contient toutes les sources lié à l'éditeur
+	- jeu : contient toutes les sources lié au jeu
+	- saves : contient toutes les sauvegardes des cartes pour le jeu
