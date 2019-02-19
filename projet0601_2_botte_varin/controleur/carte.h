@@ -28,9 +28,11 @@
 #include <sys/msg.h>    /* Pour msgget */
 #include <sys/sem.h>  /* Pour semget, semctl, semop */
 #include <errno.h>      /* Pour errno */
-
+#include <time.h>	/* Pour srand */
+#include <signal.h>    /* Pour kill */
 #include "ncurses.h"
 #include "structures.h"
+
 /* ouvre une carte */
 int openCarte(const char *);
 
@@ -54,6 +56,8 @@ void setSegmentVals(key_t,segment_t*);
 
 int getNbVal(int,int);
 
+int segmentEquals(segment_t *seg1,segment_t *seg2);
+
 void setValCase(int,int,int,unsigned char);
 
 /* renvoie le nombre de vies restantes */
@@ -67,6 +71,12 @@ void getPosGuerrier(int, unsigned char*,unsigned char*);
 
 /* modifier la position du valeureux guerrier dans la sauvegarde */
 void setPosGuerrier(int,int,int);
+
+/*changer le type d'une case aléatoire vers un type minotaure(type 11 ou supp)*/
+void setCaseTypeMinotaure(int,int);
+
+/*faire apparaître une case minautore*/
+void makeMinotaurAppear(WINDOW*, int, int);
 
 /* savoir on a perdu */
 int hasLost(int);

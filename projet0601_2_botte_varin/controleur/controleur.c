@@ -1,11 +1,10 @@
 #include "structures.h"
 #include "carte.h"
 
-
 int stop=0;
 
 int main(int argc, char* argv[]) {
-    int msqid,fd;
+    int msqid,fd,i;
 
     segment_t * leSegment;
 
@@ -13,7 +12,11 @@ int main(int argc, char* argv[]) {
     requete_t requete;
 
     int semid; /* semaphores id*/
-    unsigned short val[2] = {5, 1}; /* init des semaphores : minautore,joueur */
+    unsigned short val[3] = {0,1,5}; /* init des semaphores : autorisation connexion minotaure, nb joueur, nb minotaures */
+
+    int numMinau=0;
+    pid_t minautores[5]; /* stocker le pid de tous les minautores */
+    pid_t joueur=0;       /* sotcker le pid du joueur */
 
     /* Test arguments */
     if(argc!=5) {
@@ -56,7 +59,7 @@ int main(int argc, char* argv[]) {
 
 
     /* Creation du tableau de semaphore */
-    if((semid = semget((key_t)atoi(argv[4]), 2, S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL)) == -1) {
+    if((semid = semget((key_t)atoi(argv[4]), 3, S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL)) == -1) {
         if(errno == EEXIST)
             fprintf(stderr, "Tableau de semaphores (cle=%d) existant\n", atoi(argv[4]));
         else
@@ -75,13 +78,18 @@ int main(int argc, char* argv[]) {
     /* attente de connexion */
     while(!stop) {
         printf("En attente d'une requete...\n");
-        if(msgrcv(msqid, &requete, sizeof(requete_t) - sizeof(long), TYPE_REQ_SMPTS, 0) == -1) {
+        if(msgrcv(msqid, &requete, sizeof(requete_t) - sizeof(long), 0, 0) == -1) {
             perror("Erreur lors de la reception d'une requete ");
             exit(EXIT_FAILURE);
         }
         printf("Requete recue (%ld)\n", requete.type);
         switch(requete.type) {
             case TYPE_REQ_SMPTS:
+                if(requete.typeActeur==TYPE_MINOTAURE) {
+                    minautores[numMinau]=requete.pid;
+                    numMinau++;
+                }
+                else if(requete.typeActeur==TYPE_JOUEUR) joueur=requete.pid;
                 reponse.type = TYPE_REP_SMPTS;
                 reponse.rep.r1.cleSMP = atoi(argv[3]);
                 reponse.rep.r1.cleTS = atoi(argv[4]);
@@ -91,12 +99,35 @@ int main(int argc, char* argv[]) {
                 }
                 printf("Controleur : reponse envoyee.\n");
                 break;
+            case TYPE_REQ_DECO:
+                if(requete.typeActeur==TYPE_JOUEUR) {
+                    if(numMinau>0) {
+                        printf("Envoie des demandes de déconnexion de tous les minautores...\n");
+                        for(i=0;i<numMinau;i++)
+                            {
+                            if(kill(minautores[i], SIGINT) == -1) {
+                                fprintf(stderr,"Erreur lors de l'envoi du signal au minautore %d",i);
+                                perror(" ");
+                                exit(EXIT_FAILURE);
+                                }
+                            }
+                        printf("Tous les minautores déconnecté avec succès.\n");
+                    }
+                    if(kill(joueur, SIGINT) == -1) {
+                        perror("Erreur lors de l'envoi du signal au joueur ");
+                        exit(EXIT_FAILURE);
+                        }
+                    printf("Controleur : reponse envoyee.\n");
+                }
+                else if(requete.typeActeur==TYPE_MINOTAURE) {
+                    /* taboulé */
+                    numMinau--;
+                }
+                break;
             default:
                 printf("ah");
                 break;
         }
-        
     }
-
     return EXIT_SUCCESS;
 }

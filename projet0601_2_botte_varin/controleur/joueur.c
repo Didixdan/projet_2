@@ -32,6 +32,8 @@ int main(int argc, char * argv[])
     struct sembuf op;
     struct sigaction action;
     
+    segment_t *leSegment;
+
     if(argc!=2) {
         fprintf(stderr,"Usage : 1 argument\n");
         fprintf(stderr,"\tOu :\n");
@@ -57,6 +59,8 @@ int main(int argc, char * argv[])
     }
 
     requete.type = TYPE_REQ_SMPTS;
+    requete.typeActeur = TYPE_JOUEUR;
+    requete.pid = getpid();
 
     if(msgsnd(msqid, &requete, sizeof(requete_t) - sizeof(long), 0) == -1) {
         perror("Erreur lors de l'envoi de la requete ");
@@ -81,13 +85,25 @@ int main(int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
 
-    /*réalisation de P(S1)*/
+    /* donner l'information de l'autorisation de connexion pour les minautores*/
+    op.sem_num = 0;
+    op.sem_op = 1;
+    op.sem_flg = IPC_NOWAIT;
+    if(semop(semid, &op, 1) == -1) {
+        if(errno==EAGAIN)
+            perror("Impossible de donner l'autorisation "); 
+        else
+            perror("Erreur lors de l'operation sur le semaphore ");
+        exit(EXIT_FAILURE);
+    }
+
+    /*réalisation de P(S1,1)*/
     op.sem_num = 1;
     op.sem_op = -1;
     op.sem_flg = IPC_NOWAIT;
     if(semop(semid, &op, 1) == -1){
         if(errno == EAGAIN)
-            perror("Nombre maximal de joueur atteint !");
+            perror("Nombre maximal de joueur atteint ");
         else
             perror("Erreur lors de l'opération sur le semaphore.");
         exit(EXIT_FAILURE);
@@ -160,7 +176,7 @@ int main(int argc, char * argv[])
     wbkgd(jeuFen,COLOR_PAIR(15));
     wrefresh(jeuFen);
 
-	jeuCarte = createWindowJeu(jeuFen,1,1);
+    jeuCarte = createWindowJeu(jeuFen,1,1);
     wbkgdset(jeuCarte,COLOR_PAIR(2));
     remplireFenCarte(jeuCarte,shmid,&vPosY,&vPosX);
     /*printf("\nposy=%d&posx=%d\n",vPosY,vPosX);*/
@@ -176,9 +192,20 @@ int main(int argc, char * argv[])
     
     move(LINES-1,0);
     printw("Utilisez les fleches directionnelles ; pressez F2 pour quitter...");
+    leSegment = getSegmentVals(shmid);
+    
     /* Routine principale */
     if(!hasLost(shmid) && !hasWon(shmid)) {
         while((ch = getch()) != KEY_F(2)) {
+            if(ch==ERR) {
+                /* on a pas bouger */
+                if(!segmentEquals(leSegment,getSegmentVals(shmid))) {
+                    /* les deux semgents sont différents */
+                    printf("pas pareil");
+
+                    sleep(1);
+                }
+            }
             vPosXTemp=vPosX;
             vPosYTemp=vPosY;
             msgDirect="";
@@ -273,6 +300,19 @@ int main(int argc, char * argv[])
     /*while(!stop) pause();*/
     /* Suppression de la fenêtre */
 
+
+    /* interdiction au minautore de se connecter */
+    op.sem_num = 0;
+    op.sem_op = -1;
+    op.sem_flg = IPC_NOWAIT;
+    if(semop(semid, &op, 1) == -1) {
+        if(errno==EAGAIN)
+            perror("Le joueur n'est pas connecté "); 
+        else
+            perror("Erreur lors de l'operation sur le semaphore ");
+        exit(EXIT_FAILURE);
+    }
+
     /*réalisation de V(S1)*/
     op.sem_num = 1;
     op.sem_op = 1;
@@ -293,8 +333,15 @@ int main(int argc, char * argv[])
     /* Arrêt de ncurses */
     ncurses_stopper();
 
-    printf("Joueur : deconnexion\n");
+    printf("Envoie de la requête de deco.\n");
+
+    requete.type = TYPE_REQ_DECO;
+    if(msgsnd(msqid, &requete, sizeof(requete_t) - sizeof(long), 0) == -1) {
+        perror("Erreur lors de l'envoi de la requete ");
+        exit(EXIT_FAILURE);
+    }
+
     
+    printf("Requete envoyee.\n");
 	return EXIT_SUCCESS;
-    return 0;
     }

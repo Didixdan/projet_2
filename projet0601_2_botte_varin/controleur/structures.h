@@ -1,13 +1,20 @@
 #ifndef _STRUCTURES_
 #define _STRUCTURES_
- 
+
+
+/* type des acteurs */
+#define TYPE_JOUEUR 1
+#define TYPE_MINOTAURE 2
+
 /* Type de message requete */
 #define TYPE_REQ_SMPTS  1
 #define TYPE_REQ_DECO   2
 
 /* Type de message reponse */
-#define TYPE_REP_SMPTS 2
- 
+#define TYPE_REP_SMPTS 1
+
+#include <sys/types.h>
+
 typedef struct {
   unsigned char type;
 } case_t;
@@ -36,6 +43,8 @@ typedef struct {
 
 typedef struct {
   long type;
+  int typeActeur;
+  pid_t pid;
 }requete_t;
 
 typedef struct {
