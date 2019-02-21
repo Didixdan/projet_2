@@ -11,6 +11,7 @@ void ncurses_initialiser() {
   cbreak();	        /* Pour les saisies clavier (desac. mise en buffer) */
   noecho();             /* Desactive l'affichage des caracteres saisis */
   keypad(stdscr, TRUE);	/* Active les touches specifiques */
+  nodelay(stdscr,TRUE); /* mettre le getch non bloquant */
   refresh();            /* Met a jour l'affichage */
   curs_set(FALSE);      /* Masque le curseur */
 }

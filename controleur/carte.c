@@ -7,6 +7,12 @@
 
 #include "carte.h"
 
+/**
+#TODO#
+On ne peut pas se déplacer sur des cases déjà visités et quitter sinon le position du guerrier est faussé
+*/
+
+
 /* Permet d'écrire la carte ouverte dans le segment de mémoire partagé */
 terrain_t getTerrainCarte(int fdCarte) {
   unsigned char val;
@@ -109,6 +115,15 @@ void setSegmentVals(int shmid,segment_t *seg) {
   memcpy(result->cases,seg->cases,sizeof(case_t)*(*seg->largeur)*(*seg->hauteur));
 }
 
+int segmentEquals(segment_t *seg1, segment_t *seg2) {
+  /*int ok=1*//*,i*/;
+  /*printf("bjr");*/
+  /*for(i=0;i<(LARGEURC*HAUTEURC);i++) {
+    if(seg1->cases[i].type!=seg2->cases[i].type) {ok=0;break;}
+  }*/
+  return seg1->largeur;
+}
+
 segment_t * getSegmentVals(int shmid) {
   void* adresse;
   segment_t * result = (segment_t*)malloc(sizeof(result));
@@ -179,7 +194,7 @@ WINDOW * createWindowJeu(WINDOW *fenMere,int y,int x)
   **/
 void remplireFenCarte(WINDOW *carte,int shmid,int *vPosY,int *vPosX)
     {
-    unsigned char val='0';
+    unsigned char val;
     unsigned char y,x=y=ZERO_ASCII;
     int i=0,j=0;
     int k=0;
@@ -190,7 +205,7 @@ void remplireFenCarte(WINDOW *carte,int shmid,int *vPosY,int *vPosX)
           i=0;
           }
       val = leSegment->cases[k].type;
-      /*printf("val=%c;",val);*/
+      /*if(val==ZERO_ASCII+10)printf("(%c;%d)",val,k);*/
       wattron(carte,COLOR_PAIR(val-ZERO_ASCII+10));
       mvwaddch(carte,j,i,val);
       wattroff(carte,COLOR_PAIR(val-ZERO_ASCII));
@@ -258,7 +273,7 @@ void setPosGuerrier(int shmid,int y,int x)
   {
   segment_t *result = getSegmentVals(shmid);
   int pos=y==0?x:y*30+x;
-  printf("%d;%d;%c",y,x,result->cases[pos].type);
+  /*printf("(%d;%d;%c)",y,x,result->cases[pos].type);*/
   result->cases[pos].type = '0'+10;
   setSegmentVals(shmid,result);
   }
@@ -293,12 +308,16 @@ int bougerValGuerrier(int shmid,int y, int x)
   return ok;
   }
 
-void setCaseTypeMinotaure(int shmid){
+void setCaseTypeMinotaure(int shmid,int semid){
 	segment_t *result = getSegmentVals(shmid);	
 	int ligne = 0;
 	int colonne = 0;
+
+  unsigned short valeur;
+
+  unsigned char type='0'+11;
 	int positionCase = 0;	
-	srand(time(NULL));	
+	srand(time(NULL));
 	
 	do{	
 		ligne = rand()%HAUTEURC;	
@@ -308,9 +327,35 @@ void setCaseTypeMinotaure(int shmid){
 		/*printf("poscase : %d\n", positionCase);*/
 	}while((result->cases[positionCase].type) != 48);
 
-	result->cases[positionCase].type = '0'+11;
 
-	printf("%d\n",/*atoi((char*)&*/result->cases[positionCase].type/*)*/);
+ /* Recuperation de la valeur du semaphore */
+  if((valeur = semctl(semid, 0, GETVAL)) == -1) {
+    perror("Erreur lors de la recuperation de la valeur du semaphore ");
+    exit(EXIT_FAILURE);
+  }
+  
+  switch(valeur) {
+    case 4:
+      type = '0'+11;
+      break;
+    case 3:
+      type = '0'+12;
+      break;
+    case 2:
+      type = '0'+13;
+      break;
+    case 1:
+      type = '0'+14;
+      break;
+    case 0:
+      type = '0'+15;
+      break;
+  }
+
+	result->cases[positionCase].type = type;
+  setSegmentVals(shmid,result);
+
+	printf("%c\n",result->cases[positionCase].type);
 }
 
 void makeMinotaurAppear(WINDOW* fen, int shmid, int posCase){
