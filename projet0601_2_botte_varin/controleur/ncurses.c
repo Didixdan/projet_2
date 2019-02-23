@@ -11,7 +11,8 @@ void ncurses_initialiser() {
   cbreak();	        /* Pour les saisies clavier (desac. mise en buffer) */
   noecho();             /* Desactive l'affichage des caracteres saisis */
   keypad(stdscr, TRUE);	/* Active les touches specifiques */
-  nodelay(stdscr,TRUE); /* mettre le getch non bloquant */
+  timeout(1000);  /*mettre le getch non bloquant */
+  /*nodelay(stdscr,TRUE);*/
   refresh();            /* Met a jour l'affichage */
   curs_set(FALSE);      /* Masque le curseur */
 }
@@ -52,7 +53,11 @@ void ncurses_couleurs() {
   init_pair(14, COLOR_WHITE, COLOR_WHITE);      /* cases visités */
   init_pair(15, COLOR_BLACK, COLOR_WHITE);    /* fond fenetre mère carte */
 
-  init_pair(16, COLOR_MAGENTA, COLOR_MAGENTA); /*Minautore*/  
+  init_pair(21, COLOR_MAGENTA, COLOR_MAGENTA); /*Minautore 1 */  
+  init_pair(22, COLOR_MAGENTA, COLOR_MAGENTA); /*Minautore 2 */  
+  init_pair(23, COLOR_MAGENTA, COLOR_MAGENTA); /*Minautore 3 */  
+  init_pair(24, COLOR_MAGENTA, COLOR_MAGENTA); /*Minautore 4 */  
+  init_pair(25, COLOR_MAGENTA, COLOR_MAGENTA); /*Minautore 5 */
 }
 
 /**

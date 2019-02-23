@@ -23,11 +23,12 @@ int main(int argc, char * argv[])
     int ok=0;
 
     struct sigaction action;
- 
+    int position=0;
     requete_t requete;
     reponse_t reponse;
     struct sembuf op;
 
+    unsigned char type=ZERO_ASCII;
     if(argc!=2) {
         fprintf(stderr,"Usage : 1 argument\n");
         fprintf(stderr,"\tOu :\n");
@@ -97,9 +98,9 @@ int main(int argc, char * argv[])
         sendDeco(requete,msqid);
         exit(EXIT_FAILURE);
     }
-	
+
     /*changement d'un type d'une case en type minautore*/
-    setCaseTypeMinotaure(shmid,semid);
+    position = setCaseTypeMinotaure(shmid,semid,&type);
     
     /* Positionnement du gestionnaire pour SIGINT */
     action.sa_handler = handler;
@@ -111,10 +112,13 @@ int main(int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
 
-    printf("Minautore : je suis là !\n");
-
-    while(!stop)pause();
-
+    printf("Minautore: je suis là !\n");
+    
+    while(!stop) {
+        bougerValMinotaure(shmid,position/30,position%30,&position,type);
+        sleep(1);
+    }
+    
     op.sem_num = 0;
     op.sem_op = 1;
     op.sem_flg = 0;
@@ -124,7 +128,18 @@ int main(int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
 
+    op.sem_num = 2;
+    op.sem_op = 1;
+    op.sem_flg = IPC_NOWAIT;
+    if(semop(semid, &op, 1) == -1) {
+        perror("Erreur lors de l'operation sur le semaphore ");
+        sendDeco(requete,msqid);
+        exit(EXIT_FAILURE);
+    }
+    
     sendDeco(requete,msqid);
     printf("Minautore : je me deco !\n");
+    delCaseTypeMinotaure(shmid,position);
+
     return 0;
     }

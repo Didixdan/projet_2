@@ -2,7 +2,7 @@
 # CONFIGURATION GENERALE
 #
 
-EXEC = controleur removeAll minautore joueur
+EXEC = controleur minautore joueur
 OBJETS = carte.o ncurses.o
 NOM_PROJET = lab_infernale
 
@@ -24,7 +24,7 @@ OBJETS_O = $(OBJETS) $(EXEC_O)
 #
 
 CC = gcc
-CCFLAGS = -Wall -O3 -Werror -ansi -pedantic -D _XOPEN_SOURCE
+CCFLAGS = -Wall -Werror -O3 -ansi -pedantic -D_XOPEN_SOURCE -D_POSIX_C_SOURCE=199309L
 CCLIBS = -lncurses
 
 #
@@ -84,6 +84,5 @@ archive: clean
 carte.o: carte.c carte.h ncurses.h structures.h
 ncurses.o: ncurses.c ncurses.h
 controleur.o: controleur.c structures.h carte.h ncurses.h
-removeAll.o: removeAll.c
 minautore.o: minautore.c structures.h carte.h ncurses.h
 joueur.o: joueur.c structures.h carte.h ncurses.h

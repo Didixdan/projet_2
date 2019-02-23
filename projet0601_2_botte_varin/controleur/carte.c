@@ -7,12 +7,6 @@
 
 #include "carte.h"
 
-/**
-#TODO#
-On ne peut pas se déplacer sur des cases déjà visités et quitter sinon le position du guerrier est faussé
-*/
-
-
 /* Permet d'écrire la carte ouverte dans le segment de mémoire partagé */
 terrain_t getTerrainCarte(int fdCarte) {
   unsigned char val;
@@ -55,6 +49,7 @@ terrain_t getTerrainCarte(int fdCarte) {
     } while(res != 0 && i != 450);
     
   terrain.cases = lesCases;
+  free(lesCases);
   return terrain;
 }
   
@@ -72,7 +67,7 @@ void* getAdresseSMP(int shmid) {
 segment_t * creer_segment(key_t cle,terrain_t terrain) {
     int shmid;
     void * adresse;
-    segment_t * result = (segment_t*)malloc(sizeof(result));
+    segment_t * result = (segment_t*)malloc(sizeof(segment_t));
     if((shmid = shmget(cle, sizeof(int)*2+sizeof(unsigned char)+sizeof(case_t)*terrain.largeur*terrain.hauteur, S_IRUSR | S_IWUSR | IPC_CREAT | IPC_EXCL)) == -1) {
         if(errno == EEXIST)
             fprintf(stderr, "Le segment de memoire partagee (cle=%d) existe deja\n", cle);
@@ -94,13 +89,13 @@ segment_t * creer_segment(key_t cle,terrain_t terrain) {
     *(result->hauteur)=terrain.hauteur;
     *(result->nbVie)=terrain.nbVie;
     memcpy(result->cases,terrain.cases,sizeof(case_t)*terrain.largeur*terrain.hauteur);
-    
+    free(terrain.cases);
     return result;
 }
 
 void setSegmentVals(int shmid,segment_t *seg) {
   void *adresse;
-  segment_t * result = (segment_t*)malloc(sizeof(result));
+  segment_t * result = (segment_t*)malloc(sizeof(segment_t));
   adresse = getAdresseSMP(shmid);
 
   result->largeur=(int*)adresse;
@@ -113,27 +108,19 @@ void setSegmentVals(int shmid,segment_t *seg) {
   *(result->hauteur)=*(seg->hauteur);
   *(result->nbVie)=*(seg->nbVie);
   memcpy(result->cases,seg->cases,sizeof(case_t)*(*seg->largeur)*(*seg->hauteur));
-}
 
-int segmentEquals(segment_t *seg1, segment_t *seg2) {
-  int ok=1/*,i*/;
-  printf("bjr");
-  /*for(i=0;i<(LARGEURC*HAUTEURC);i++) {
-    if(seg1->cases[i].type!=seg2->cases[i].type) {ok=0;break;}
-  }*/
-  return ok;
+  free(result);
 }
 
 segment_t * getSegmentVals(int shmid) {
   void* adresse;
-  segment_t * result = (segment_t*)malloc(sizeof(result));
+  segment_t * result = (segment_t*)malloc(sizeof(segment_t));
   adresse = getAdresseSMP(shmid);
   
   result->largeur=(int*)adresse;
   result->hauteur=&result->largeur[1];
   result->nbVie=(unsigned char*)&result->hauteur[1];
   result->cases=(case_t *)&result->nbVie[1];
-
   return result;
 }
 
@@ -147,12 +134,13 @@ int getNbVal(int shmid,int valeurCase)
     val = result->cases[i].type;
     if(val-ZERO_ASCII==valeurCase) nb++;
     }
+  free(result);
   return nb;
   }
 
 /**
   * Charge la carte dont le nom est passer en paramètre pour édition/jeu
-  * @param nomCarte le nom de la carte à créer/charger
+  * @param nomCarte le nom de la carte à charger
   * @return l'entier du descripteur du fichier
   **/
 int openCarte(const char * nomCarte)
@@ -171,7 +159,7 @@ int openCarte(const char * nomCarte)
 	return fdCarte;
 	}
 
-/**
+/**+ 
   * Créer la fenètre de la carte
   * @param fenMere la fenetre mère de la carte
   * @param fdCarte le descripteur de fichier
@@ -194,21 +182,20 @@ WINDOW * createWindowJeu(WINDOW *fenMere,int y,int x)
   **/
 void remplireFenCarte(WINDOW *carte,int shmid,int *vPosY,int *vPosX)
     {
-    unsigned char val;
+    unsigned char val=ZERO_ASCII;
     unsigned char y,x=y=ZERO_ASCII;
     int i=0,j=0;
     int k=0;
-    segment_t *leSegment = getSegmentVals(shmid);
+    segment_t *result = getSegmentVals(shmid);
     do {
       if(i==30) {
           j++;
           i=0;
           }
-      val = leSegment->cases[k].type;
-      /*if(val==ZERO_ASCII+10)printf("(%c;%d)",val,k);*/
+      val = result->cases[k].type;
       wattron(carte,COLOR_PAIR(val-ZERO_ASCII+10));
       mvwaddch(carte,j,i,val);
-      wattroff(carte,COLOR_PAIR(val-ZERO_ASCII));
+      wattroff(carte,COLOR_PAIR(val-ZERO_ASCII+10));
       i++;
       k++;
     } while(k != 450);
@@ -217,13 +204,14 @@ void remplireFenCarte(WINDOW *carte,int shmid,int *vPosY,int *vPosX)
     mvwaddch(carte, 8, 29, 'S');
     wattron(carte,COLOR_PAIR(1));
 
-    getPosGuerrier(shmid,&y,&x);
+    getPosGuerrier(result,&y,&x);
     *vPosX=x-'0';
     *vPosY=y-'0';
     wattron(carte,COLOR_PAIR(9));
     mvwaddch(carte, *vPosY, *vPosX, ' ');
     wattron(carte,COLOR_PAIR(9));
-
+    
+    free(result);
     }
 
 void setValCase(int shmid,int y,int x,unsigned char val) {
@@ -231,13 +219,13 @@ void setValCase(int shmid,int y,int x,unsigned char val) {
   segment_t *result = getSegmentVals(shmid);
   result->cases[pos].type = val;
   setSegmentVals(shmid,result);
+  free(result);
 }
 
-void getPosGuerrier(int shmid, unsigned char *y,unsigned char *x)
+void getPosGuerrier(segment_t* result, unsigned char *y,unsigned char *x)
   {
   int i,j,k=j=i=0;
-  unsigned char val;
-  segment_t *result = getSegmentVals(shmid);
+  unsigned char val='0';
   do {
     if(i==30) {
       j++;
@@ -247,6 +235,7 @@ void getPosGuerrier(int shmid, unsigned char *y,unsigned char *x)
     if(val-ZERO_ASCII==10) {
       *y=j+'0';
       *x=i+'0';
+      break;
     }
     i++;
     k++;
@@ -256,16 +245,15 @@ void getPosGuerrier(int shmid, unsigned char *y,unsigned char *x)
   * Renvoie le nombre de vie de la carte passé en paramètre
   * @param fdCarte le descripteur de fichier de la carte
   **/
-unsigned char getNbVie(int shmid)
+unsigned char getNbVie(segment_t *result)
   {
-  segment_t *result = getSegmentVals(shmid);
-  return *result->nbVie;
+  unsigned char val = *result->nbVie;
+  return val;
   }
  
-void setVieRestante(int shmid,unsigned char nbVie)
+void setVieRestante(int shmid,segment_t *result, unsigned char nbVie)
   {
-  segment_t *result = getSegmentVals(shmid);
-  result->nbVie = &nbVie;
+  *result->nbVie = nbVie;
   setSegmentVals(shmid,result);
   }
 
@@ -276,6 +264,7 @@ void setPosGuerrier(int shmid,int y,int x)
   /*printf("(%d;%d;%c)",y,x,result->cases[pos].type);*/
   result->cases[pos].type = '0'+10;
   setSegmentVals(shmid,result);
+  free(result);
   }
 
 /** 
@@ -305,61 +294,148 @@ int bougerValGuerrier(int shmid,int y, int x)
     {
     /* méchant minautore */
     }
+  
+  free(result);
   return ok;
   }
 
-void setCaseTypeMinotaure(int shmid,int semid){
+void delCaseTypeMinotaure(int shmid,int position) {
+  segment_t *result = getSegmentVals(shmid);
+  result->cases[position].type=0;
+  setSegmentVals(shmid,result);
+  free(result);
+}
+
+int setCaseTypeMinotaure(int shmid,int semid, unsigned char* type){
 	segment_t *result = getSegmentVals(shmid);	
 	int ligne = 0;
 	int colonne = 0;
-
   unsigned short valeur;
-
-  unsigned char type='0'+11;
 	int positionCase = 0;	
+  *type=ZERO_ASCII+11;
 	srand(time(NULL));
 	
 	do{	
 		ligne = rand()%HAUTEURC;	
 		colonne = rand()%LARGEURC;	
 		positionCase = ligne==0?colonne:ligne*30+colonne;
-		/*printf("%d\n",result->cases[positionCase].type));*/
-		/*printf("poscase : %d\n", positionCase);*/
 	}while((result->cases[positionCase].type) != 48);
 
 
  /* Recuperation de la valeur du semaphore */
-  if((valeur = semctl(semid, 0, GETVAL)) == -1) {
+  if((valeur = semctl(semid, 2, GETVAL)) == -1) {
     perror("Erreur lors de la recuperation de la valeur du semaphore ");
     exit(EXIT_FAILURE);
   }
   
   switch(valeur) {
     case 4:
-      type = '0'+11;
+      *type = ZERO_ASCII+11;
       break;
     case 3:
-      type = '0'+12;
+      *type = ZERO_ASCII+12;
       break;
     case 2:
-      type = '0'+13;
+      *type = ZERO_ASCII+13;
       break;
     case 1:
-      type = '0'+14;
+      *type = ZERO_ASCII+14;
       break;
     case 0:
-      type = '0'+15;
+      *type = ZERO_ASCII+15;
       break;
   }
 
-	result->cases[positionCase].type = type;
+	result->cases[positionCase].type = *type;
   setSegmentVals(shmid,result);
 
-	printf("%c\n",result->cases[positionCase].type);
+	printf("(Type;Case) -> (%d;%d):(%d;%d)\n",result->cases[positionCase].type-ZERO_ASCII,positionCase,ligne,colonne);
+  free(result);
+  return positionCase;
 }
 
-void makeMinotaurAppear(WINDOW* fen, int shmid, int posCase){
+int isGuerrierHere(int shmid, segment_t *result, int pos) {
+  int i=0;
+  unsigned char val=ZERO_ASCII;
+  int ok=0;
+  int oldPos=0;
+  do {
+    switch(i) {
+      case 0:
+        pos-=30;
+        break;
+      case 1:
+        pos+=30;
+        break;
+      case 2:
+        pos-=1;
+        break;
+      case 3:
+        pos+=1;
+        break;
+    }
+  if(pos<0 || pos>(LARGEURC*HAUTEURC)) {pos=oldPos;continue;}
+  val = result->cases[pos].type;
+  if(val==ZERO_ASCII+10) {
+    /* le valeureux guerrier est à la position "pos" */
+    ok=i;
+    setVieRestante(shmid,result,getNbVie(result)-1);
+  }
+  i++;
+  }while(i!=4);
 
+  setSegmentVals(shmid,result);
+  return ok;
+}
+void bougerValMinotaure(int shmid,int y,int x, int * position,unsigned char typeMin) {
+  segment_t *result = getSegmentVals(shmid);
+  int dir=0;
+  int pos=y==0?x:y*30+x;
+  int oldPos=0;
+  unsigned char val='1';
+  int ok,okGuerrier=ok=0;
+	srand(time(NULL));
+  /**
+    * Direction choisi aléatoirement
+    * 0 pour haut, 1 pour bas, 2 pour gauche, 3 pour droite
+    */
+  printf("Je bouge ! %d;%d;%d\n",*position/30,*position%30,*position);
+  okGuerrier=isGuerrierHere(shmid, result, pos);
+  do {
+    printf("je test");
+    dir = rand()%4;
+    if(dir==okGuerrier)continue;
+    oldPos=pos;
+    switch(dir) {
+      case 0:
+        pos-=30;
+        break;
+      case 1:
+        pos+=30;
+        break;
+      case 2:
+        pos-=1;
+        break;
+      case 3:
+        pos+=1;
+        break;
+    }
+    if(pos<0 || pos>(LARGEURC*HAUTEURC)) {pos=oldPos;continue;}
+    val = result->cases[pos].type;
+    if(val=='1' || val=='2') {pos=oldPos;continue;}
+    if(val=='0' || val=='4') {
+      result->cases[oldPos].type = ZERO_ASCII;
+      result->cases[pos].type = typeMin;
+      ok=1;
+    }
+    printf("(Type;CaseTypeNew;pos) -> (%d;%d;%d)\n",val,result->cases[pos].type,pos);
+  }while(!ok);
+
+  isGuerrierHere(shmid,result, pos);
+  *position=pos;
+
+  setSegmentVals(shmid,result);
+  free(result);
 }
 
 int hasLost(int shmid)

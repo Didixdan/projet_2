@@ -29,7 +29,7 @@
 #include <sys/sem.h>  /* Pour semget, semctl, semop */
 #include <errno.h>      /* Pour errno */
 #include <time.h>	/* Pour srand */
-#include <signal.h>    /* Pour kill */
+#include <signal.h>    /* Pour kill, sigaction */
 #include "ncurses.h"
 #include "structures.h"
 
@@ -50,33 +50,37 @@ int bougerValGuerrier(int,int,int);
 
 segment_t * creer_segment(key_t,terrain_t); 
 
-segment_t *getSegmentVals(key_t);
+segment_t *getSegmentVals(int);
 
-void setSegmentVals(key_t,segment_t*);
+void setSegmentVals(int,segment_t*);
 
 int getNbVal(int,int);
-
-int segmentEquals(segment_t *seg1,segment_t *seg2);
 
 void setValCase(int,int,int,unsigned char);
 
 /* renvoie le nombre de vies restantes */
-unsigned char getNbVie(int);
+unsigned char getNbVie(segment_t*);
 
 /* modifier le nombre de vie restante de la sauvegarde */
-void setVieRestante(int,unsigned char);
+void setVieRestante(int, segment_t *,unsigned char);
 
 /* renvoie la position du valeureux guerrier */
-void getPosGuerrier(int, unsigned char*,unsigned char*);
+void getPosGuerrier(segment_t*, unsigned char*,unsigned char*);
 
 /* modifier la position du valeureux guerrier dans la sauvegarde */
 void setPosGuerrier(int,int,int);
 
 /*changer le type d'une case aléatoire vers un type minotaure(type 11 ou supp)*/
-void setCaseTypeMinotaure(int,int);
+int setCaseTypeMinotaure(int,int,unsigned char*);
 
-/*faire apparaître une case minautore*/
-void makeMinotaurAppear(WINDOW*, int, int);
+/*changer le type d'une case minotaure vers 0 */
+void delCaseTypeMinotaure(int,int);
+
+/*faire bouger le minotaure*/
+void bougerValMinotaure(int,int,int,int*,unsigned char);
+
+/* savoir si le guerrier est aux alentours du minotaure */
+int isGuerrierHere(int , segment_t *, int);
 
 /* savoir on a perdu */
 int hasLost(int);
