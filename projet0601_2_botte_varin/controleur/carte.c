@@ -241,21 +241,6 @@ void getPosGuerrier(segment_t* result, unsigned char *y,unsigned char *x)
     k++;
     }while(k!=450);
   }
-/**
-  * Renvoie le nombre de vie de la carte passé en paramètre
-  * @param fdCarte le descripteur de fichier de la carte
-  **/
-unsigned char getNbVie(segment_t *result)
-  {
-  unsigned char val = *result->nbVie;
-  return val;
-  }
- 
-void setVieRestante(int shmid,segment_t *result, unsigned char nbVie)
-  {
-  *result->nbVie = nbVie;
-  setSegmentVals(shmid,result);
-  }
 
 void setPosGuerrier(int shmid,int y,int x)
   {
@@ -292,7 +277,7 @@ int bougerValGuerrier(int shmid,int y, int x)
     }
   else if(valeur>'0'+10)
     {
-    /* méchant minautore */
+    ok=2; /* on considère le minotaure comme un mur visible */
     }
   
   free(result);
@@ -354,24 +339,25 @@ int setCaseTypeMinotaure(int shmid,int semid, unsigned char* type){
   return positionCase;
 }
 
-int isGuerrierHere(int shmid, segment_t *result, int pos) {
+int isGuerrierHere(segment_t *result, int pos) {
   int i=0;
   unsigned char val=ZERO_ASCII;
   int ok=0;
   int oldPos=0;
-  do {
+  do {    
+    oldPos=pos;
     switch(i) {
       case 0:
-        pos-=30;
+        pos-=30; /* haut */
         break;
       case 1:
-        pos+=30;
+        pos+=30; /* bas */
         break;
       case 2:
-        pos-=1;
+        pos-=1; /* gauche */
         break;
       case 3:
-        pos+=1;
+        pos+=1; /* droite */
         break;
     }
   if(pos<0 || pos>(LARGEURC*HAUTEURC)) {pos=oldPos;continue;}
@@ -379,12 +365,12 @@ int isGuerrierHere(int shmid, segment_t *result, int pos) {
   if(val==ZERO_ASCII+10) {
     /* le valeureux guerrier est à la position "pos" */
     ok=i;
-    setVieRestante(shmid,result,getNbVie(result)-1);
+    *result->nbVie -= 1;
+    break;
   }
   i++;
   }while(i!=4);
 
-  setSegmentVals(shmid,result);
   return ok;
 }
 void bougerValMinotaure(int shmid,int y,int x, int * position,unsigned char typeMin) {
@@ -400,29 +386,28 @@ void bougerValMinotaure(int shmid,int y,int x, int * position,unsigned char type
     * 0 pour haut, 1 pour bas, 2 pour gauche, 3 pour droite
     */
   printf("Je bouge ! %d;%d;%d\n",*position/30,*position%30,*position);
-  okGuerrier=isGuerrierHere(shmid, result, pos);
+  okGuerrier=isGuerrierHere(result, pos);
   do {
-    printf("je test");
     dir = rand()%4;
     if(dir==okGuerrier)continue;
     oldPos=pos;
     switch(dir) {
       case 0:
-        pos-=30;
+        pos-=30;/* haut */
         break;
       case 1:
-        pos+=30;
+        pos+=30;/* bas */
         break;
       case 2:
-        pos-=1;
+        pos-=1;/* gauche */
         break;
       case 3:
-        pos+=1;
+        pos+=1;/* droite */
         break;
     }
     if(pos<0 || pos>(LARGEURC*HAUTEURC)) {pos=oldPos;continue;}
     val = result->cases[pos].type;
-    if(val=='1' || val=='2') {pos=oldPos;continue;}
+    if(val=='1' || val=='2' || val=='3' || val>=ZERO_ASCII+10) {pos=oldPos;continue;}
     if(val=='0' || val=='4') {
       result->cases[oldPos].type = ZERO_ASCII;
       result->cases[pos].type = typeMin;
@@ -431,22 +416,25 @@ void bougerValMinotaure(int shmid,int y,int x, int * position,unsigned char type
     printf("(Type;CaseTypeNew;pos) -> (%d;%d;%d)\n",val,result->cases[pos].type,pos);
   }while(!ok);
 
-  isGuerrierHere(shmid,result, pos);
   *position=pos;
 
   setSegmentVals(shmid,result);
   free(result);
 }
 
-int hasLost(int shmid)
+int hasLost(segment_t* result)
   {
-    return 0;
+  int ok=0;
+  if(*result->nbVie==ZERO_ASCII) ok=1;
+  return ok; 
   }
 
-int hasWon(int shmid) 
+int hasWon(segment_t* result) 
   {
-    return 0;
-
+  int ok=0;
+  int posExit=(8*30)+29; /* position gagnante : ligne 8 case 29 */
+  if(result->cases[posExit].type==ZERO_ASCII+10) ok=1;
+  return ok; 
   }
 
 void closeCarte(int fdCarte)

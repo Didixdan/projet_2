@@ -144,7 +144,7 @@ int main(int argc, char * argv[])
     }
 
     result = getSegmentVals(shmid);
-    
+
     /*Calcul de la position centrale*/
     posX = COLS / 2 - 1;
     move(0,0);
@@ -159,7 +159,7 @@ int main(int argc, char * argv[])
 
     buttonFen = newwin(8,18,11,LARGEURC+3);
     wmove(buttonFen,0,1);
-    wprintw(buttonFen,"Vies : %c",getNbVie(result));
+    wprintw(buttonFen,"Vies : %c",*result->nbVie);
     wbkgd(buttonFen,COLOR_PAIR(15));
 
     /* affichage de la légende */
@@ -218,7 +218,7 @@ int main(int argc, char * argv[])
     printw("Utilisez les fleches directionnelles ; pressez F2 pour quitter...");
     
     /* Routine principale */
-    if(!hasLost(shmid) && !hasWon(shmid)) {
+    if(!hasLost(result) && !hasWon(result)) {
         while((ch = getch()) != KEY_F(2) && !stop) {
             if(ch==ERR || (ch != KEY_LEFT && ch != KEY_RIGHT && ch != KEY_UP && ch != KEY_DOWN)) {
                 /* on a pas bouger */
@@ -280,10 +280,6 @@ int main(int argc, char * argv[])
                     setValCase(shmid,vPosYTemp,vPosXTemp,ZERO_ASCII+10);
 
                     wprintw(infosText,"Vous etes aller %s : %s (%d,%d)\n",msgDirect,msgInfo,vPosX,vPosY);
-                    wmove(buttonFen,0,1);
-                    wclrtoeol(buttonFen);/* on supprime la ligne */
-                    wprintw(buttonFen,"Vies : %c",getNbVie(result));
-                    wrefresh(buttonFen);
                 }
 
                 else
@@ -295,32 +291,48 @@ int main(int argc, char * argv[])
                         setValCase(shmid,vPosYTemp,vPosXTemp,'4');
                     }
                     wprintw(infosText,"Vous etes aller %s : pas de mur (%d,%d)\n",msgDirect,vPosX,vPosY);
-                    
-                    wmove(buttonFen,1,1);
-                    wclrtoeol(buttonFen);
-                    wrefresh(buttonFen);
                     }
+                    
                 remplireFenCarte(jeuCarte,shmid,&vPosY,&vPosX);
                 wrefresh(jeuCarte);
                 wrefresh(infosText);
                 wrefresh(infosFen);
-                if(hasLost(shmid) || hasWon(shmid))break;
+                if(hasLost(result) || hasWon(result))break;
             }
+        wmove(buttonFen,0,1);
+        wclrtoeol(buttonFen);/* on supprime la ligne */
+        wprintw(buttonFen,"Vies : %c",*result->nbVie);
+        wrefresh(buttonFen);
         }
     }
-    if(hasLost(shmid)) {
-        move(LINES-1,0); /* on va à la dernière ligne du terminal */
-        clrtoeol(); /* on supprime la ligne pour afficher le message d'avoir perdu */
-        printw("Vous avez perdu ! Appuyez sur F2 pour quitter.");
-        while((ch = getch()) != KEY_F(2)) {}
+    if(hasLost(result) || hasWon(result)) {
+        requete.type = TYPE_REQ_EVT;
+        if(msgsnd(msqid, &requete, sizeof(requete_t) - sizeof(long), 0) == -1) {
+            ncurses_stopper();
+            perror("Erreur lors de l'envoi de la requete ");
+            sendDeco(requete,msqid);
+            exit(EXIT_FAILURE);
+        }
+        
+        if(msgrcv(msqid, &reponse, sizeof(reponse_t) - sizeof(long), TYPE_REP_EVT, 0) == -1) {
+            ncurses_stopper();
+            perror("Erreur lors de la reception d'une requete ");
+            sendDeco(requete,msqid);
+            exit(EXIT_FAILURE);
+        }
+        if(hasLost(result)) {
+            move(LINES-1,0); /* on va à la dernière ligne du terminal */
+            clrtoeol(); /* on supprime la ligne pour afficher le message d'avoir perdu */
+            printw("Vous avez perdu face à %d minotaures ! Appuyez sur F2 pour quitter.",reponse.rep.r2.nbMino);
+            while((ch = getch()) != KEY_F(2)) {}
+        }
+        else if(hasWon(result)){
+            move(LINES-1,0); /* on va à la dernière ligne du terminal */
+            clrtoeol(); /* on supprime la ligne pour afficher le message d'avoir perdu */
+            printw("Vous avez gagné face à %d minotaures ! Appuyez sur F2 pour quitter.",reponse.rep.r2.nbMino);
+            while((ch = getch()) != KEY_F(2)) {}
+        }
     }
-    else if(hasWon(shmid)){
-        move(LINES-1,0); /* on va à la dernière ligne du terminal */
-        clrtoeol(); /* on supprime la ligne pour afficher le message d'avoir perdu */
-        printw("Vous avez gagné ! Appuyez sur F2 pour quitter.");
-        while((ch = getch()) != KEY_F(2)) {}
-    }
-
     /*while(!stop) pause();*/
     /* Suppression de la fenêtre */
     delwin(jeuCarte);

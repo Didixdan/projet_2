@@ -58,12 +58,6 @@ int getNbVal(int,int);
 
 void setValCase(int,int,int,unsigned char);
 
-/* renvoie le nombre de vies restantes */
-unsigned char getNbVie(segment_t*);
-
-/* modifier le nombre de vie restante de la sauvegarde */
-void setVieRestante(int, segment_t *,unsigned char);
-
 /* renvoie la position du valeureux guerrier */
 void getPosGuerrier(segment_t*, unsigned char*,unsigned char*);
 
@@ -80,13 +74,13 @@ void delCaseTypeMinotaure(int,int);
 void bougerValMinotaure(int,int,int,int*,unsigned char);
 
 /* savoir si le guerrier est aux alentours du minotaure */
-int isGuerrierHere(int , segment_t *, int);
+int isGuerrierHere(segment_t *, int);
 
 /* savoir on a perdu */
-int hasLost(int);
+int hasLost(segment_t*);
 
 /* savoir si on a gagner */
-int hasWon(int);
+int hasWon(segment_t*);
 
 /* ferme le fichier de la carte */
 void closeCarte(int);

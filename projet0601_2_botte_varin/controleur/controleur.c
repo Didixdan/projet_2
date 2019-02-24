@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     int semid; /* semaphores id*/
     unsigned short val[3] = {0,1,5}; /* init des semaphores : autorisation connexion minotaure, nb joueur, nb minotaures */
 
-    int numMinau=0;   
+    int nbMino=0;   
 
     /* Test arguments */
     if(argc!=5) {
@@ -164,8 +164,8 @@ int main(int argc, char* argv[]) {
         switch(requete.type) {
             case TYPE_REQ_SMPTS:
                 if(requete.typeActeur==TYPE_MINOTAURE) {
-                    minautores[numMinau]=requete.pid;
-                    numMinau++;
+                    minautores[nbMino]=requete.pid;
+                    nbMino++;
                 }
                 else if(requete.typeActeur==TYPE_JOUEUR) joueur=requete.pid;
                 reponse.type = TYPE_REP_SMPTS;
@@ -179,9 +179,9 @@ int main(int argc, char* argv[]) {
                 break;
             case TYPE_REQ_DECO:
                 if(requete.typeActeur==TYPE_JOUEUR) {
-                    if(numMinau>0) {
+                    if(nbMino>0) {
                         printf("Envoie des demandes de déconnexion de tous les minautores...\n");
-                        for(i=0;i<numMinau;i++)
+                        for(i=0;i<nbMino;i++)
                             {
                             if(kill(minautores[i], SIGINT) == -1) {
                                 fprintf(stderr,"Erreur lors de l'envoi du signal au minautore %d",i);
@@ -202,12 +202,34 @@ int main(int argc, char* argv[]) {
                     /* on remet à 0 les valeurs */
                     memset(minautores,(pid_t)0,sizeof(pid_t)*5);
                     joueur = (pid_t)0;
+                    nbMino=0;
                 }
                 else if(requete.typeActeur==TYPE_MINOTAURE) {
-                    numMinau--;
-                    minautores[numMinau]=(pid_t)0;
+                    nbMino--;
+                    minautores[nbMino]=(pid_t)0;
                 }
             break;
+            case TYPE_REQ_EVT:
+                printf("Envoie des demandes de déconnexion de tous les minautores...\n");
+                    for(i=0;i<nbMino;i++)
+                        {
+                        if(kill(minautores[i], SIGINT) == -1) {
+                            fprintf(stderr,"Erreur lors de l'envoi du signal au minautore %d",i);
+                            perror(" ");
+                            exit(EXIT_FAILURE);
+                            }
+                        }
+                printf("Tous les minautores déconnecté avec succès.\n");
+                reponse.type = TYPE_REP_EVT;
+                reponse.rep.r2.nbMino = nbMino;
+                if(msgsnd(msqid, &reponse, sizeof(reponse_t) - sizeof(long), 0) == -1) {
+                    perror("Erreur lors de l'envoi de la reponse ");
+                    exit(EXIT_FAILURE);
+                }
+                memset(minautores,(pid_t)0,sizeof(pid_t)*5);
+                nbMino=0;
+                printf("Reponse envoyee au joueur.\n");
+                break;
         }
     }
     printf("Attente que tous les processus soit bien fini...\n");

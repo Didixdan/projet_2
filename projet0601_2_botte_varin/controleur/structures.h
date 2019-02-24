@@ -7,11 +7,13 @@
 #define TYPE_MINOTAURE 2
 
 /* Type de message requete */
-#define TYPE_REQ_SMPTS  1
-#define TYPE_REQ_DECO   2
+#define TYPE_REQ_SMPTS  1 /* avoir les clé smp et ts */
+#define TYPE_REQ_DECO   2 /* requête pour se déconecter */
+#define TYPE_REQ_EVT    3 /* requête lorsque le joueur envoie un événement (gagner ou perdu) */
 
 /* Type de message reponse */
-#define TYPE_REP_SMPTS 1
+#define TYPE_REP_SMPTS  1
+#define TYPE_REP_EVT    2
 
 #include <sys/types.h>
 
@@ -42,6 +44,10 @@ typedef struct {
 } reponse_smpts_t;
 
 typedef struct {
+  int nbMino;
+} reponse_evt_t;
+
+typedef struct {
   long type;
   int typeActeur;
   pid_t pid;
@@ -51,6 +57,7 @@ typedef struct {
   long type;
   union {
     reponse_smpts_t r1;
+    reponse_evt_t r2;
   }rep;
 }reponse_t;
 
