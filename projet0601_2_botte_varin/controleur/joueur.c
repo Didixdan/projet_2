@@ -44,7 +44,7 @@ int main(int argc, char * argv[])
     if(argc!=2) {
         fprintf(stderr,"Usage : 1 argument\n");
         fprintf(stderr,"\tOu :\n");
-        fprintf(stderr,"\t\tcle FDM : la clé de la file de messgae précédemment créer par le controleur\n");
+        fprintf(stderr,"\t\tcle FDM : la clé de la file de message précédemment créer par le controleur\n");
         exit(EXIT_FAILURE);
     }
 
@@ -157,7 +157,7 @@ int main(int argc, char * argv[])
     
 
 
-    buttonFen = newwin(8,18,11,LARGEURC+3);
+    buttonFen = newwin(9,18,11,LARGEURC+3);
     wmove(buttonFen,0,1);
     wprintw(buttonFen,"Vies : %c",*result->nbVie);
     wbkgd(buttonFen,COLOR_PAIR(15));
@@ -187,10 +187,16 @@ int main(int argc, char * argv[])
     wmove(buttonFen,5,3);
     wprintw(buttonFen,"Mur decouvert");
 
-    wattron(buttonFen,COLOR_PAIR(1));
-    mvwaddch(buttonFen,6,1,'S');
-    wattroff(buttonFen,COLOR_PAIR(1));
+    wattron(buttonFen,COLOR_PAIR(21));
+    mvwaddch(buttonFen,6,1,' ');
+    wattroff(buttonFen,COLOR_PAIR(21));
     wmove(buttonFen,6,3);
+    wprintw(buttonFen,"Minotaure(s)");
+
+    wattron(buttonFen,COLOR_PAIR(1));
+    mvwaddch(buttonFen,7,1,'S');
+    wattroff(buttonFen,COLOR_PAIR(1));
+    wmove(buttonFen,7,3);
     wprintw(buttonFen,"Sortie");
     /***********************************/
 
